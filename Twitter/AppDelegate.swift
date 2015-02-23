@@ -12,11 +12,23 @@ import UIKit
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
+    var storyboard = UIStoryboard(name: "Main", bundle: nil)
 
 
     func application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject: AnyObject]?) -> Bool {
-        // Override point for customization after application launch.
+        
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: "userDidLogout", name: userDidLogoutNotification, object: nil)
+
+        if User.currentUser != nil {
+            println("Current user detected")
+            window?.rootViewController = storyboard.instantiateViewControllerWithIdentifier("TweetsViewController") as? UIViewController
+        }
         return true
+    }
+    
+    func userDidLogout() {
+        window?.rootViewController = storyboard.instantiateInitialViewController() as? UIViewController
+        
     }
 
     func applicationWillResignActive(application: UIApplication) {
@@ -42,5 +54,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
 
+    func application(application: UIApplication, openURL url: NSURL, sourceApplication: String?, annotation: AnyObject?) -> Bool {
+        TwitterClient.sharedInstance.openURL(url)
+        return true
+    }
 }
 
