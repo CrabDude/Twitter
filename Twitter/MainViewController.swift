@@ -39,8 +39,14 @@ class MainViewController: UIViewController, UITableViewDataSource, UITableViewDe
     // MARK: - Navigation
 
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-        // Get the new view controller using segue.destinationViewController.
-        // Pass the selected object to the new view controller.
+        if let tweet = sender as? Tweet, dc = segue.destinationViewController as? ComposeViewController {
+            dc.tweet = tweet
+        }
+        
+        
+        if let tweet = sender as? Tweet, dc = segue.destinationViewController as? TweetViewController {
+            dc.tweet = tweet
+        }
     }
     
     
@@ -58,18 +64,17 @@ class MainViewController: UIViewController, UITableViewDataSource, UITableViewDe
             cell.thumbImage.setImageWithURL(imageUrl)
         }
         
+        
+        cell.replyButton.addTarget(self, action: "replyTapped:", forControlEvents: .TouchUpInside)
+        cell.retweetButton.addTarget(self, action: "retweetTapped:", forControlEvents: .TouchUpInside)
+        cell.favoriteButton.addTarget(self, action: "favoriteTapped:", forControlEvents: .TouchUpInside)
+        
         if let createdAt = tweet.createdAt {
             println(createdAt)
             let now = NSDate()
             let distanceBetweenDates = now.timeIntervalSinceDate(createdAt)
             let hoursBetweenDates = Int(distanceBetweenDates / 3600)
-
-//            let calendar = NSCalendar.currentCalendar()
-//            let calendar = NSCalendar(calendarIdentifier: NSGregorianCalendar)!
-//            calendar.setTimeZone(NSTimeZone.timeZoneWithName("PST"))
-//            let travelDateTimeComponents = calendar.components((.HourCalendarUnit | .MinuteCalendarUnit), fromDate:tweet.createdAt!)
-//            let hours = NSString(format: "%02i", travelDateTimeComponents.hour)
-//            let comp = calendar.components((.HourCalendarUnit | .MinuteCalendarUnit), fromDate: tweet.createdAt!)
+            
             if hoursBetweenDates < 24 {
                 cell.timeLabel.text = "\(hoursBetweenDates)h"
             } else {
@@ -78,6 +83,17 @@ class MainViewController: UIViewController, UITableViewDataSource, UITableViewDe
                 formatter.timeZone = NSTimeZone(abbreviation: "PST")
                 cell.timeLabel.text = formatter.stringFromDate(createdAt)
             }
+        }
+        
+        if tweet.retweeted == true {
+            cell.retweetButton.setImage(UIImage(named:"1040-checkmark-toolbar-selected"), forState: .Normal)
+            
+        }
+        
+        
+        if tweet.favorited == true {
+            cell.favoriteButton.setImage(UIImage(named:"726-star-toolbar-selected"), forState: .Normal)
+            
         }
         
         return cell
@@ -93,19 +109,45 @@ class MainViewController: UIViewController, UITableViewDataSource, UITableViewDe
     }
     
     func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
-        //        self.tableView.deselectRowAtIndexPath(indexPath, animated: true)
-        //
-        //        let vc = MovieDetailsViewController(nibName: "MovieDetailsViewController", bundle: nil)
-        //        vc.data = self.data?["movies"][indexPath.row]
-        //        if let cell = self.tableView.cellForRowAtIndexPath(indexPath) as? MovieCell {
-        //            vc.thumbnail = cell.movieImage?.image
-        //        }
-        //
-        //        self.navigationController?.pushViewController(vc, animated: true)
+        self.performSegueWithIdentifier("tweetDetails", sender:self.tweets[indexPath.row])
     }
 
     @IBAction func onLogout(sender: AnyObject) {
         User.currentUser?.logout()
+    }
+    
+    func replyTapped(sender: UIButton!) {
+        let cell = sender.superview?.superview as! TweetCell
+        if let indexPath = self.tableView.indexPathForCell(cell) {
+            let tweet = self.tweets[indexPath.row]
+            
+            self.performSegueWithIdentifier("composeSegue", sender:tweet)
+        }
+        
+    }
+    
+    func retweetTapped(sender: UIButton!) {
+        println("retweetTapped")
+        let cell = sender.superview?.superview as! TweetCell
+        if let indexPath = self.tableView.indexPathForCell(cell) {
+            let tweet = self.tweets[indexPath.row]
+            TwitterClient.sharedInstance.retweetWithCompletion(tweet.id!) {
+                (error) -> () in
+                println(error)
+                cell.retweetButton.setImage(UIImage(named:"1040-checkmark-toolbar-selected"), forState: .Normal)
+            }
+        }
+    }
+    
+    func favoriteTapped(sender: UIButton!) {
+        let cell = sender.superview?.superview as! TweetCell
+        if let indexPath = self.tableView.indexPathForCell(cell) {
+            let tweet = self.tweets[indexPath.row]
+            TwitterClient.sharedInstance.favoriteWithCompletion(tweet.id!, completion: { (error) -> () in
+                let cell = self.tableView.cellForRowAtIndexPath(indexPath) as! TweetCell
+                cell.favoriteButton.setImage(UIImage(named:"726-star-toolbar-selected"), forState: .Normal)
+            })
+        }
     }
 
     func onRefresh() {

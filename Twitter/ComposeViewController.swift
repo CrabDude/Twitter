@@ -15,15 +15,25 @@ class ComposeViewController: UIViewController {
     @IBOutlet weak var screennameLabel: UILabel!
     @IBOutlet weak var statusTextView: UITextView!
     
+    var tweet: Tweet?
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
         self.nameLabel.text = User.currentUser?.name
-        let screename = User.currentUser?.screenname!
-        self.screennameLabel.text = "@\(screename)"
+        let screename = User.currentUser?.screenname
+        self.screennameLabel.text = "@\(screename!)"
         if let imageUrlString = User.currentUser?.profileImageUrl, let imageUrl = NSURL(string: imageUrlString) {
             self.thumbImageView.setImageWithURL(imageUrl)
         }
+        
+        if let tweet = self.tweet, screenname = tweet.user?.screenname {
+            self.statusTextView.text = "@\(screenname) "
+        } else {
+            self.statusTextView.text = ""
+        }
+        
+        self.statusTextView.becomeFirstResponder()
     }
 
     override func didReceiveMemoryWarning() {
@@ -43,14 +53,22 @@ class ComposeViewController: UIViewController {
     */
 
     @IBAction func onTweet(sender: AnyObject) {
-        let status = self.statusTextView.text
-        TwitterClient.sharedInstance.tweetWithCompletion(["status": status]) {
-            (error) -> () in
-            self.navigationController?.popViewControllerAnimated(true)
-            if let vc = self.presentingViewController as? MainViewController {
-                println("loading data")
-                vc.loadData()
+        if let status = self.statusTextView.text {
+            var params = ["status": status]
+            if let tweet = self.tweet {
+                params["in_reply_to_status_id"] = tweet.id
             }
+            
+            TwitterClient.sharedInstance.tweetWithCompletion(params) {
+                (error) -> () in
+                self.navigationController?.popViewControllerAnimated(true)
+                
+                if let vc = self.navigationController?.visibleViewController as? MainViewController {
+                    vc.loadData()
+                }
+            }
+        } else {
+            self.navigationController?.popViewControllerAnimated(true)
         }
     }
 }

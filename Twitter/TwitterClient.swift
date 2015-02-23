@@ -37,7 +37,7 @@ class TwitterClient: BDBOAuth1RequestOperationManager {
     }
     
     func homeTimelineWithCompletion(params: NSDictionary?, completion: (tweets: [Tweet]?, error: NSError?) -> ()) {
-        self.GET("1.1/statuses/home_timeline.json", parameters: nil, success: { (operation, response) -> Void in
+        self.GET("1.1/statuses/home_timeline.json", parameters: ["exclude_replies": "false"], success: { (operation, response) -> Void in
             var tweets = Tweet.tweetsWithArray(response as! [NSDictionary])
             completion(tweets: tweets, error: nil)
         }) { (operation, error) -> Void in
@@ -70,6 +70,22 @@ class TwitterClient: BDBOAuth1RequestOperationManager {
         }) { (request, error) -> Void in
             completion(error: error)
         }
-        
     }
+    
+    func favoriteWithCompletion(id: String, completion: (error: NSError?) -> ()) {
+        self.POST("1.1/favorites/create.json", parameters: ["id": id], success: { (request, data) -> Void in
+            completion(error: nil)
+        }) { (request, error) -> Void in
+            completion(error: error)
+        }
+    }
+    
+    func retweetWithCompletion(id: String, completion: (error: NSError?) -> ()) {
+        self.POST("1.1/statuses/retweet/\(id).json", parameters: nil, success: { (request, data) -> Void in
+            completion(error: nil)
+            }) { (request, error) -> Void in
+                completion(error: error)
+        }
+    }
+    
 }
